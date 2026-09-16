@@ -200,11 +200,11 @@ class AgentLoop:
             turns += 1
             completion = self.provider.complete(self.system_prompt, self.messages, tool_defs)
             self.messages.append(completion.as_message(self.provider.name))
-            if completion.text:
-                self.ui.on_text(completion.text)
             if not completion.tool_calls:
                 final_text = completion.text
                 break
+            if completion.text:
+                self.ui.on_text(completion.text)  # intermediate narration only
 
             results: list[ToolResult] = []
             aborted = False

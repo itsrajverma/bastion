@@ -94,3 +94,24 @@ def check(
     if not role_allows(role, risk):
         return PolicyDecision(False, f"role {role!r} may not invoke {risk!r} tools")
     return PolicyDecision(True, "allowed")
+
+
+#: Printed by ``bastion tools --denied``. These are not "disabled"; they do not exist.
+NEVER_ACTIONS: tuple[str, ...] = (
+    "run an arbitrary shell command (no bash/exec/run_command tool exists)",
+    "delete, move, or overwrite files (rm, mv, truncate, > redirection)",
+    "write to any path outside /var/log/bastion (the audit log)",
+    "read secrets: .env*, *.pem, *.key, id_rsa*, /etc/shadow, /etc/sudoers*",
+    "kill -9 / SIGKILL any process (only SIGTERM, with a protected list)",
+    "signal root- or postgres-owned processes, sshd, systemd, dockerd, nginx/gunicorn masters",
+    "signal a process younger than 30 seconds",
+    "terminate non-client PostgreSQL backends or replication connections",
+    "DROP, TRUNCATE, DELETE, UPDATE, or read table rows in PostgreSQL",
+    "docker rm / docker kill / docker system prune",
+    "edit nginx, systemd, sudoers, firewall, or cron configuration",
+    "reboot or shut down the host",
+    "install or remove packages",
+    "change users, passwords, SSH keys, or permissions",
+    "execute any write or admin tool without a human typing 'y'",
+    "call any network service other than the configured LLM provider and executor",
+)

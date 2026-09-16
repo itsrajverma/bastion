@@ -68,7 +68,7 @@ def test_read_only_flow() -> None:
     assert result.tools_called == ["top_processes"]
     assert "Diagnosis" in result.text
     assert executor.ran == [("top_processes", {"limit": 5}, None)]
-    assert ui.kinds() == ["start", "tool_start", "tool_end", "text"]
+    assert ui.kinds() == ["start", "tool_start", "tool_end"]
 
 
 def test_tool_output_is_fenced_and_redacted_before_model() -> None:

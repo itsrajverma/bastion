@@ -66,7 +66,7 @@ include = ["bastion", "docs", "deploy", "scripts", "tests", "README.md", "LICENS
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-src = ["bastion", "tests"]
+src = ["."]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "S", "N", "RUF"]
@@ -75,7 +75,11 @@ ignore = [
   "S603",   # subprocess without shell: list-form calls are exactly what we want
   "S607",   # partial executable path: PATH lookup is intended for sudo/systemctl
   "RUF012", # mutable class attrs on pydantic models
+  "N818",   # error class names follow the spec (PolicyDenied, ProtectedTarget, ...)
 ]
+
+[tool.ruff.lint.isort]
+known-first-party = ["bastion"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S105", "S106", "S108", "E501", "B011"]

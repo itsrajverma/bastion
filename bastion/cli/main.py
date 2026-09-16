@@ -20,13 +20,36 @@ app = typer.Typer(
     no_args_is_help=True,
     add_completion=False,
     context_settings={"help_option_names": ["-h", "--help"]},
+    # Plain click help/tracebacks: keeps `bastion --help` from importing rich (startup budget).
+    rich_markup_mode=None,
+    pretty_exceptions_enable=False,
 )
-servers_app = typer.Typer(help="Manage executor servers.", no_args_is_help=True)
-audit_app = typer.Typer(help="Read the executor's audit log.", no_args_is_help=True)
+servers_app = typer.Typer(
+    help="Manage executor servers.", no_args_is_help=True, rich_markup_mode=None
+)
+audit_app = typer.Typer(
+    help="Read the executor's audit log.", no_args_is_help=True, rich_markup_mode=None
+)
 app.add_typer(servers_app, name="servers")
 app.add_typer(audit_app, name="audit")
 
 PROVIDER_CHOICES = ("anthropic", "openai", "ollama")
+
+
+def _utf8_streams() -> None:
+    """Glyphs (✔ ✘ ◆) must never crash the CLI on a non-UTF-8 stdout (e.g. Windows pipes)."""
+    for stream in (sys.stdout, sys.stderr):
+        encoding = (getattr(stream, "encoding", "") or "").lower().replace("-", "")
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None or encoding == "utf8":
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (ValueError, OSError):  # pragma: no cover - exotic streams
+            pass
+
+
+_utf8_streams()
 
 
 def _version(value: bool) -> None:

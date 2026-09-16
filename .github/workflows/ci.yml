@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  no-shell:
+    name: "Invariant: no shell=True / os.system / os.popen"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: grep for forbidden shell primitives
+        run: |
+          set -euo pipefail
+          if grep -rnE 'shell\s*=\s*True|os\.system\(|os\.popen\(|subprocess\.getoutput|subprocess\.getstatusoutput' bastion/; then
+            echo "::error::Forbidden shell primitive found in bastion/ (see SECURITY.md invariant 2)"
+            exit 1
+          fi
+          echo "OK: no shell primitives in bastion/"
+
+  lint:
+    name: ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+
+  typecheck:
+    name: mypy --strict (core, tools)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e ".[dev]"
+      - run: mypy
+
+  test:
+    name: pytest (py${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e ".[dev]"
+      - run: pytest
+      - name: docs/TOOLS.md is up to date
+        run: |
+          python -m bastion.tools --docs > /tmp/TOOLS.md
+          diff -u docs/TOOLS.md /tmp/TOOLS.md

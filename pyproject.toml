@@ -1,0 +1,102 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bastion-sre"
+version = "0.1.0"
+description = "An AI SRE that can't break production."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [{ name = "Bastion contributors" }]
+keywords = ["sre", "ai", "devops", "cli", "llm", "security"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: System Administrators",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: System :: Systems Administration",
+]
+dependencies = [
+  "typer>=0.12",
+  "rich>=13.7",
+  "pydantic>=2.6",
+  "httpx>=0.27",
+  "pyyaml>=6.0",
+  "psutil>=5.9",
+]
+
+[project.optional-dependencies]
+executor = [
+  "fastapi>=0.110",
+  "uvicorn>=0.29",
+  "psycopg[binary]>=3.1",
+]
+dev = [
+  "fastapi>=0.110",
+  "uvicorn>=0.29",
+  "psycopg[binary]>=3.1",
+  "pytest>=8.0",
+  "ruff>=0.5",
+  "mypy>=1.10",
+  "types-PyYAML",
+  "types-psutil",
+]
+
+[project.scripts]
+bastion = "bastion.cli.main:app"
+bastion-executor = "bastion.executor.main:run"
+
+[project.urls]
+Homepage = "https://github.com/bastion-sre/bastion"
+Security = "https://github.com/bastion-sre/bastion/blob/main/SECURITY.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["bastion"]
+
+[tool.hatch.build.targets.sdist]
+include = ["bastion", "docs", "deploy", "scripts", "tests", "README.md", "LICENSE", "SECURITY.md"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["bastion", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "S", "N", "RUF"]
+ignore = [
+  "S101",   # asserts are fine in tests and as internal invariants
+  "S603",   # subprocess without shell: list-form calls are exactly what we want
+  "S607",   # partial executable path: PATH lookup is intended for sudo/systemctl
+  "RUF012", # mutable class attrs on pydantic models
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S105", "S106", "S108", "E501", "B011"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.10"
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = false
+show_error_codes = true
+files = ["bastion/core", "bastion/tools"]
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["psycopg", "psycopg.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["error::DeprecationWarning:bastion.*"]

@@ -1,0 +1,7 @@
+{
+  "description": "Recorded: what's using the most CPU? -> top_processes -> answer",
+  "turns": [
+    {"text": "", "tool_calls": [{"name": "top_processes", "args": {"limit": 5}}]},
+    {"text": "Diagnosis: nothing is saturating the CPU; the top process is python at a few percent. Load is well below the core count.", "tool_calls": []}
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "description": "Recorded: 'restart the app' is ambiguous -> ask_user -> restart_service",
+  "turns": [
+    {"text": "", "tool_calls": [{"name": "ask_user", "args": {"question": "Which service do you mean: gunicorn, celery, or nginx?"}}]},
+    {"text": "I will restart gunicorn as you asked.", "tool_calls": [{"name": "restart_service", "args": {"service": "gunicorn"}}]},
+    {"text": "gunicorn restarted and is active.", "tool_calls": []}
+  ]
+}

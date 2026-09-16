@@ -89,3 +89,22 @@ def error_payload(exc: BaseException) -> dict[str, Any]:
     if isinstance(exc, BastionError):
         return exc.to_payload()
     return {"error": "internal_error", "message": "internal error"}
+
+
+class ExecutorError(BastionError):
+    """The executor refused or failed a request (client-side view)."""
+
+    code = "executor_error"
+    status = 502
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        status: int = 502,
+        remote_code: str = "executor_error",
+        detail: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(message, detail=detail)
+        self.status = status
+        self.remote_code = remote_code

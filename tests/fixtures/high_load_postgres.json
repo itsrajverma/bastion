@@ -1,0 +1,10 @@
+{
+  "description": "Recorded: server is slow -> load_avg -> top_processes -> db_active_queries -> propose db_cancel_query -> verify",
+  "turns": [
+    {"text": "Checking load first.", "tool_calls": [{"name": "load_avg", "args": {}}]},
+    {"text": "", "tool_calls": [{"name": "top_processes", "args": {"limit": 5}}]},
+    {"text": "postgres is the top consumer; looking at active queries.", "tool_calls": [{"name": "db_active_queries", "args": {"limit": 10}}]},
+    {"text": "Root cause: pid 4242 has been running a full-table report query for 14 minutes. I will cancel that query (gentlest option).", "tool_calls": [{"name": "db_cancel_query", "args": {"pid": 4242}}]},
+    {"text": "Diagnosis: a 14-minute report query (pid 4242) was saturating CPU. Cancelled it; load is dropping.", "tool_calls": []}
+  ]
+}

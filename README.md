@@ -84,7 +84,7 @@ flowchart LR
 **🖥️ Server** (Ubuntu/Debian with systemd; runs as an unprivileged `bastion` user bound to `127.0.0.1:8710`):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bastion-sre/bastion/main/scripts/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/itsrajverma/bastion/main/scripts/install.sh | sudo bash
 ```
 
 The installer prints a one-time admin token. The executor starts with `enabled_risks: [read]`.

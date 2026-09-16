@@ -1,15 +1,15 @@
 # Every change needs a maintainer review; security-critical paths need two.
-*                                   @bastion-sre/maintainers
+*                                   @itsrajverma
 
 # Trust boundary: policy, guards, execution, auth, deploy hardening.
-/bastion/core/                      @bastion-sre/maintainers @bastion-sre/security
-/bastion/tools/                     @bastion-sre/maintainers @bastion-sre/security
-/bastion/executor/                  @bastion-sre/maintainers @bastion-sre/security
-/bastion/agent/prompts.py           @bastion-sre/maintainers @bastion-sre/security
-/deploy/                            @bastion-sre/maintainers @bastion-sre/security
-/scripts/install.sh                 @bastion-sre/maintainers @bastion-sre/security
-/tests/adversarial/                 @bastion-sre/maintainers @bastion-sre/security
-/tests/test_no_shell_true.py        @bastion-sre/maintainers @bastion-sre/security
-/SECURITY.md                        @bastion-sre/maintainers @bastion-sre/security
-/docs/THREAT_MODEL.md               @bastion-sre/maintainers @bastion-sre/security
-/.github/workflows/                 @bastion-sre/maintainers @bastion-sre/security
+/bastion/core/                      @itsrajverma
+/bastion/tools/                     @itsrajverma
+/bastion/executor/                  @itsrajverma
+/bastion/agent/prompts.py           @itsrajverma
+/deploy/                            @itsrajverma
+/scripts/install.sh                 @itsrajverma
+/tests/adversarial/                 @itsrajverma
+/tests/test_no_shell_true.py        @itsrajverma
+/SECURITY.md                        @itsrajverma
+/docs/THREAT_MODEL.md               @itsrajverma
+/.github/workflows/                 @itsrajverma

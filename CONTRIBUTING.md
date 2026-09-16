@@ -11,7 +11,7 @@ Thanks for helping make Bastion useful without making it dangerous.
 ## Development setup
 
 ```bash
-git clone https://github.com/bastion-sre/bastion && cd bastion
+git clone https://github.com/itsrajverma/bastion && cd bastion
 uv venv && uv pip install -e ".[dev]"      # or: python -m venv .venv && pip install -e ".[dev]"
 ruff check . && ruff format --check .
 mypy                                        # strict on bastion/core and bastion/tools

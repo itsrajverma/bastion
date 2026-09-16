@@ -1,6 +1,6 @@
 [Unit]
 Description=Bastion executor (AI SRE tool runner, loopback only)
-Documentation=https://github.com/bastion-sre/bastion
+Documentation=https://github.com/itsrajverma/bastion
 After=network.target
 
 [Service]

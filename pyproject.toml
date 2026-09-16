@@ -54,8 +54,8 @@ bastion = "bastion.cli.main:app"
 bastion-executor = "bastion.executor.main:run"
 
 [project.urls]
-Homepage = "https://github.com/bastion-sre/bastion"
-Security = "https://github.com/bastion-sre/bastion/blob/main/SECURITY.md"
+Homepage = "https://github.com/itsrajverma/bastion"
+Security = "https://github.com/itsrajverma/bastion/blob/main/SECURITY.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["bastion"]

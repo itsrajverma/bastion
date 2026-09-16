@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Bastion executor installer (server side).
 #
-#   curl -fsSL https://raw.githubusercontent.com/bastion-sre/bastion/main/scripts/install.sh | sudo bash
+#   curl -fsSL https://raw.githubusercontent.com/itsrajverma/bastion/main/scripts/install.sh | sudo bash
 #
 # Idempotent: re-running upgrades the package and refreshes the unit/sudoers
 # files but never rotates an existing token or overwrites an edited config.
@@ -132,7 +132,7 @@ say "installed ${SUDOERS}"
 cat > "${UNIT}" <<'EOF'
 [Unit]
 Description=Bastion executor (AI SRE tool runner, loopback only)
-Documentation=https://github.com/bastion-sre/bastion
+Documentation=https://github.com/itsrajverma/bastion
 After=network.target
 
 [Service]

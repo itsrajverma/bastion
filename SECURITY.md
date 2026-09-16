@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Email **security@bastion-sre.dev** (or open a GitHub Security Advisory on this repository).
+Open a [GitHub Security Advisory](https://github.com/itsrajverma/bastion/security/advisories/new) on this repository (private by default).
 Do not open a public issue for anything that could let a model, a prompt, or a token holder do more than the invariants below allow.
 
 - We acknowledge reports within 3 business days and aim to ship a fix within 14 days for anything that breaks an invariant.

@@ -42,3 +42,24 @@ def service_logs(service: Service, lines: LogLines = 100) -> str:
         timeout=20,
     )
     return result.render()
+
+
+@tool(
+    risk="write",
+    approve=True,
+    plan="sudo systemctl restart {service}",
+    verify_with="service_status",
+)
+def restart_service(service: Service) -> str:
+    """Restart a systemd service (nginx, gunicorn, celery, or postgresql).
+
+    This is the heaviest fix available; prefer cancelling a query or terminating a
+    single worker first. Requires operator approval.
+
+    Args:
+        service: one of nginx, gunicorn, celery, postgresql.
+    """
+    result = run_cmd(["systemctl", "restart", service], sudo=True, timeout=60)
+    after = run_cmd(["systemctl", "is-active", service], timeout=10)
+    lines = [result.render(), f"is-active after restart: {after.output() or after.returncode}"]
+    return "\n".join(lines)

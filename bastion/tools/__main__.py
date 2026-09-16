@@ -7,9 +7,20 @@ import sys
 from typing import Any
 
 from bastion.tools import sorted_registry
+from bastion.tools._context import ToolContext, get_context, set_context
 
 
 def render_docs() -> str:
+    # Plans that embed executor config (certbot email) render placeholders in docs.
+    previous = get_context()
+    set_context(ToolContext(postgres_dsn="<postgres_dsn>", certbot_email="<certbot_email>"))
+    try:
+        return _render_docs()
+    finally:
+        set_context(previous)
+
+
+def _render_docs() -> str:
     lines = [
         "# Tools",
         "",

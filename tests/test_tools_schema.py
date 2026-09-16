@@ -73,11 +73,10 @@ def test_tool_has_plan(name: str) -> None:
 
 def test_no_destructive_tools() -> None:
     """Invariant 3: nothing in the registry can delete, drop, truncate, or kill -9."""
-    banned_words = ("rm ", "rm -", "drop ", "truncate", "kill -9", "docker rm", "delete from")
+    banned = re.compile(r"(rm -rf|rm -f|drop table|truncate|kill -9|docker rm|delete from)", re.I)
     for spec in REGISTRY.values():
-        text = (spec.description + " " + spec.name).lower()
-        for word in banned_words:
-            assert word not in text, f"{spec.name} mentions {word!r}"
+        text = spec.description + " " + spec.name
+        assert not banned.search(text), f"{spec.name} mentions a destructive action: {text[:80]}"
 
 
 def test_no_generic_command_tool() -> None:

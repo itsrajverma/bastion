@@ -6,13 +6,18 @@ The guard lives here, in code, and is evaluated on both ``plan()`` and
 
 from __future__ import annotations
 
+import os
 import re
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Any
 
 import psutil
 
 from bastion.core.errors import ProtectedTarget, ValidationFailed
+from bastion.tools import tool
+from bastion.tools._types import Pid
 
 PROTECTED_USERS: frozenset[str] = frozenset({"root", "postgres"})
 PROTECTED_CMD_RE = re.compile(
@@ -59,7 +64,7 @@ def protection_reason(info: ProcessInfo, *, now: float | None = None) -> str | N
     """Why this process must not be signalled, or None if it may be."""
     if info.pid == 1:
         return "pid 1 (init) is protected"
-    if info.pid == psutil.Process().pid:
+    if info.pid == os.getpid():
         return "refusing to signal the executor itself"
     user = info.user.split("\\")[-1].lower()  # DOMAIN\\user on Windows dev boxes
     if user in PROTECTED_USERS:
@@ -77,3 +82,34 @@ def assert_signalable(pid: int) -> ProcessInfo:
     if reason:
         raise ProtectedTarget(f"refusing to signal {info.summary()}: {reason}")
     return info
+
+
+def _guard(kwargs: Mapping[str, Any]) -> None:
+    assert_signalable(int(kwargs["pid"]))
+
+
+@tool(risk="write", approve=True, plan="kill -TERM {pid}", verify_with="load_avg")
+def kill_process(pid: Pid) -> str:
+    """Send SIGTERM (graceful stop) to one process. Never SIGKILL.
+
+    Refuses pid 1, processes owned by root or postgres, anything matching
+    postgres/sshd/systemd/dockerd/nginx master/gunicorn master, and processes
+    younger than 30 seconds. Requires operator approval.
+
+    Args:
+        pid: the process id from top_processes or process_detail.
+    """
+    info = assert_signalable(pid)
+    proc = psutil.Process(pid)
+    proc.terminate()  # SIGTERM on POSIX
+    try:
+        proc.wait(timeout=3)
+        outcome = "exited"
+    except psutil.TimeoutExpired:
+        outcome = "still running (SIGTERM delivered; it may shut down gracefully)"
+    except psutil.NoSuchProcess:
+        outcome = "exited"
+    return f"SIGTERM sent to {info.summary()}\noutcome: {outcome}"
+
+
+kill_process.validator(_guard)

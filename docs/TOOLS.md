@@ -21,6 +21,12 @@ read = green, write = yellow, admin = red.
 | `service_logs` | read | no | viewer, operator, admin | Fetch the most recent journal lines for a systemd service |
 | `service_status` | read | no | viewer, operator, admin | Show whether a systemd service is active, its main pid, restart count, and start time |
 | `top_processes` | read | no | viewer, operator, admin | List the processes using the most CPU (then memory), like `top` sorted by CPU |
+| `db_cancel_query` | write | yes | operator, admin | Cancel the running statement of one PostgreSQL backend (pg_cancel_backend) |
+| `install_ssl` | write | yes | operator, admin | Obtain and install a Let's Encrypt certificate for a domain via certbot's nginx plugin |
+| `kill_process` | write | yes | operator, admin | Send SIGTERM (graceful stop) to one process |
+| `renew_ssl` | write | yes | operator, admin | Renew every certificate that is due (certbot renew) |
+| `restart_service` | write | yes | operator, admin | Restart a systemd service (nginx, gunicorn, celery, or postgresql) |
+| `db_terminate_query` | admin | yes | admin | Terminate one PostgreSQL client backend (pg_terminate_backend), closing its connection |
 
 ## `ask_user`
 
@@ -227,4 +233,112 @@ List the processes using the most CPU (then memory), like `top` sorted by CPU.
 
   ```
   psutil.process_iter() sorted by cpu_percent desc, memory_percent desc
+  ```
+
+## `db_cancel_query`
+
+Cancel the running statement of one PostgreSQL backend (pg_cancel_backend). The connection stays open; only the current query is interrupted. Gentlest DB fix. Refuses non-client backends and replication users. Requires approval.
+
+- **Risk:** write
+- **Needs approval:** yes
+- **Roles:** operator, admin
+- **Verified after run with:** `db_active_queries`
+- **Arguments:**
+  - `pid` (integer, required) backend pid from db_active_queries or db_locks.
+- **Plan:**
+
+  ```
+  SELECT pg_cancel_backend(a.pid) AS done, a.pid, a.usename, a.state,
+         left(regexp_replace(a.query, '\s+', ' ', 'g'), 120) AS query
+  FROM pg_stat_activity a
+  WHERE a.pid = 1
+    AND a.backend_type = 'client backend'
+    AND a.pid <> pg_backend_pid()
+    AND a.usename IS NOT NULL
+    AND a.usename NOT IN (SELECT rolname FROM pg_roles WHERE rolreplication)
+  ```
+
+## `install_ssl`
+
+Obtain and install a Let's Encrypt certificate for a domain via certbot's nginx plugin. The domain must already point at this host. Requires operator approval.
+
+- **Risk:** write
+- **Needs approval:** yes
+- **Roles:** operator, admin
+- **Verified after run with:** `nginx_test`
+- **Arguments:**
+  - `domain` (string, required) fully qualified domain name, lowercase, e.g. app.example.com.
+- **Plan:**
+
+  ```
+  sudo certbot --nginx -d app.example.com --non-interactive --agree-tos -m <certbot_email>
+  ```
+
+## `kill_process`
+
+Send SIGTERM (graceful stop) to one process. Never SIGKILL. Refuses pid 1, processes owned by root or postgres, anything matching postgres/sshd/systemd/dockerd/nginx master/gunicorn master, and processes younger than 30 seconds. Requires operator approval.
+
+- **Risk:** write
+- **Needs approval:** yes
+- **Roles:** operator, admin
+- **Verified after run with:** `load_avg`
+- **Arguments:**
+  - `pid` (integer, required) the process id from top_processes or process_detail.
+- **Plan:**
+
+  ```
+  kill -TERM 1
+  ```
+
+## `renew_ssl`
+
+Renew every certificate that is due (certbot renew). Requires operator approval.
+
+- **Risk:** write
+- **Needs approval:** yes
+- **Roles:** operator, admin
+- **Verified after run with:** `nginx_test`
+- **Plan:**
+
+  ```
+  sudo certbot renew
+  ```
+
+## `restart_service`
+
+Restart a systemd service (nginx, gunicorn, celery, or postgresql). This is the heaviest fix available; prefer cancelling a query or terminating a single worker first. Requires operator approval.
+
+- **Risk:** write
+- **Needs approval:** yes
+- **Roles:** operator, admin
+- **Verified after run with:** `service_status`
+- **Arguments:**
+  - `service` (enum: nginx, gunicorn, celery, postgresql, required) one of nginx, gunicorn, celery, postgresql.
+- **Plan:**
+
+  ```
+  sudo systemctl restart nginx
+  ```
+
+## `db_terminate_query`
+
+Terminate one PostgreSQL client backend (pg_terminate_backend), closing its connection. Use only when db_cancel_query did not help. Refuses non-client backends and replication users. Admin role and approval required.
+
+- **Risk:** admin
+- **Needs approval:** yes
+- **Roles:** admin
+- **Verified after run with:** `db_active_queries`
+- **Arguments:**
+  - `pid` (integer, required) backend pid from db_active_queries or db_locks.
+- **Plan:**
+
+  ```
+  SELECT pg_terminate_backend(a.pid) AS done, a.pid, a.usename, a.state,
+         left(regexp_replace(a.query, '\s+', ' ', 'g'), 120) AS query
+  FROM pg_stat_activity a
+  WHERE a.pid = 1
+    AND a.backend_type = 'client backend'
+    AND a.pid <> pg_backend_pid()
+    AND a.usename IS NOT NULL
+    AND a.usename NOT IN (SELECT rolname FROM pg_roles WHERE rolreplication)
   ```

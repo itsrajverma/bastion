@@ -11,10 +11,10 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from bastion.core.errors import ToolExecutionError
+from bastion.core.errors import ProtectedTarget, ToolExecutionError
 from bastion.tools import tool
 from bastion.tools._context import require_postgres_dsn
-from bastion.tools._types import QueryLimit
+from bastion.tools._types import Pid, QueryLimit
 
 STATEMENT_TIMEOUT_MS = 10_000
 
@@ -108,3 +108,68 @@ def db_locks() -> str:
     """Show PostgreSQL lock chains: which backends are blocked and by whom (pg_blocking_pids)."""
     rows = query(LOCKS_SQL)
     return _render(rows, ["pid", "user", "state", "wait", "blocked_by", "age", "query"])
+
+
+# Guards live in the WHERE clause (invariant 5): only client backends, never
+# replication users, never our own connection. If the guard filters the row out,
+# nothing is signalled and the tool reports a protected target.
+_SIGNAL_SQL = r"""
+SELECT {func}(a.pid) AS done, a.pid, a.usename, a.state,
+       left(regexp_replace(a.query, '\s+', ' ', 'g'), 120) AS query
+FROM pg_stat_activity a
+WHERE a.pid = %s
+  AND a.backend_type = 'client backend'
+  AND a.pid <> pg_backend_pid()
+  AND a.usename IS NOT NULL
+  AND a.usename NOT IN (SELECT rolname FROM pg_roles WHERE rolreplication)
+""".strip()
+
+CANCEL_SQL = _SIGNAL_SQL.format(func="pg_cancel_backend")
+TERMINATE_SQL = _SIGNAL_SQL.format(func="pg_terminate_backend")
+
+
+def _signal_backend(sql: str, pid: int, verb: str) -> str:
+    rows = query(sql, (pid,))
+    if not rows:
+        raise ProtectedTarget(
+            f"backend {pid} was not {verb}: it does not exist, is not a client backend, "
+            "or belongs to a replication user"
+        )
+    done, bpid, user, state, text = rows[0][:5]
+    return f"{verb}: {done}\npid: {bpid}  user: {user}  state: {state}\nquery: {text}"
+
+
+@tool(
+    risk="write",
+    approve=True,
+    plan=lambda pid: CANCEL_SQL.replace("%s", str(pid)),
+    verify_with="db_active_queries",
+)
+def db_cancel_query(pid: Pid) -> str:
+    """Cancel the running statement of one PostgreSQL backend (pg_cancel_backend).
+
+    The connection stays open; only the current query is interrupted. Gentlest DB
+    fix. Refuses non-client backends and replication users. Requires approval.
+
+    Args:
+        pid: backend pid from db_active_queries or db_locks.
+    """
+    return _signal_backend(CANCEL_SQL, pid, "cancelled")
+
+
+@tool(
+    risk="admin",
+    approve=True,
+    plan=lambda pid: TERMINATE_SQL.replace("%s", str(pid)),
+    verify_with="db_active_queries",
+)
+def db_terminate_query(pid: Pid) -> str:
+    """Terminate one PostgreSQL client backend (pg_terminate_backend), closing its connection.
+
+    Use only when db_cancel_query did not help. Refuses non-client backends and
+    replication users. Admin role and approval required.
+
+    Args:
+        pid: backend pid from db_active_queries or db_locks.
+    """
+    return _signal_backend(TERMINATE_SQL, pid, "terminated")

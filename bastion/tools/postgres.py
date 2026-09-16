@@ -143,7 +143,7 @@ def _signal_backend(sql: str, pid: int, verb: str) -> str:
     risk="write",
     approve=True,
     plan=lambda pid: CANCEL_SQL.replace("%s", str(pid)),
-    verify_with="db_active_queries",
+    verify_with="load_avg",
 )
 def db_cancel_query(pid: Pid) -> str:
     """Cancel the running statement of one PostgreSQL backend (pg_cancel_backend).
@@ -161,7 +161,7 @@ def db_cancel_query(pid: Pid) -> str:
     risk="admin",
     approve=True,
     plan=lambda pid: TERMINATE_SQL.replace("%s", str(pid)),
-    verify_with="db_active_queries",
+    verify_with="load_avg",
 )
 def db_terminate_query(pid: Pid) -> str:
     """Terminate one PostgreSQL client backend (pg_terminate_backend), closing its connection.

@@ -1,0 +1,46 @@
+[Unit]
+Description=Bastion executor (AI SRE tool runner, loopback only)
+Documentation=https://github.com/bastion-sre/bastion
+After=network.target
+
+[Service]
+Type=simple
+User=bastion
+Group=bastion
+Environment=BASTION_CONFIG=/etc/bastion/config.yaml
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/bastion/bin/bastion-executor
+Restart=always
+RestartSec=2
+UMask=0077
+
+# --- sandbox -----------------------------------------------------------------
+# The whole filesystem is read-only except the audit log directory.
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/log/bastion
+# sudo keeps timestamp files here; ignored if the directory does not exist.
+ReadWritePaths=-/run/sudo
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+LockPersonality=true
+RestrictRealtime=true
+RestrictNamespaces=true
+SystemCallArchitectures=native
+MemoryDenyWriteExecute=true
+
+# kill_process sends SIGTERM via os.kill after the protected-target guard, so
+# the service needs CAP_KILL and no sudo rule for kill (see docs/DECISIONS.md).
+AmbientCapabilities=CAP_KILL
+
+# sudo is a setuid binary; NoNewPrivileges/RestrictSUIDSGID would break the
+# systemctl/nginx/certbot rules in deploy/sudoers.bastion. Do not enable them.
+NoNewPrivileges=false
+
+[Install]
+WantedBy=multi-user.target

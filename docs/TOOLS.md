@@ -242,7 +242,7 @@ Cancel the running statement of one PostgreSQL backend (pg_cancel_backend). The 
 - **Risk:** write
 - **Needs approval:** yes
 - **Roles:** operator, admin
-- **Verified after run with:** `db_active_queries`
+- **Verified after run with:** `load_avg`
 - **Arguments:**
   - `pid` (integer, required) backend pid from db_active_queries or db_locks.
 - **Plan:**
@@ -327,7 +327,7 @@ Terminate one PostgreSQL client backend (pg_terminate_backend), closing its conn
 - **Risk:** admin
 - **Needs approval:** yes
 - **Roles:** admin
-- **Verified after run with:** `db_active_queries`
+- **Verified after run with:** `load_avg`
 - **Arguments:**
   - `pid` (integer, required) backend pid from db_active_queries or db_locks.
 - **Plan:**

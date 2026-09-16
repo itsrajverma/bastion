@@ -1,0 +1,23 @@
+# /etc/sudoers.d/bastion  (mode 0440, validated with `visudo -cf` by install.sh)
+#
+# Exactly the commands Bastion's tools run, nothing else. There is deliberately
+# no rule for kill, rm, bash, sh, or any command that accepts a free-form path.
+# kill_process uses CAP_KILL from the systemd unit instead of sudo.
+#
+# Arguments are matched with sudo regular expressions (sudo >= 1.9.10) so that
+# an argument can never smuggle extra flags: sudoers globs (`*`) match spaces.
+# install.sh substitutes the real binary paths for this host.
+
+Defaults:bastion !requiretty
+Defaults:bastion env_reset
+Defaults:bastion timestamp_timeout=0
+
+Cmnd_Alias BASTION_NGINX     = /usr/sbin/nginx -t
+Cmnd_Alias BASTION_SYSTEMCTL = /usr/bin/systemctl restart nginx, \
+                               /usr/bin/systemctl restart gunicorn, \
+                               /usr/bin/systemctl restart celery, \
+                               /usr/bin/systemctl restart postgresql
+Cmnd_Alias BASTION_CERTBOT   = /usr/bin/certbot renew, \
+                               /usr/bin/certbot ^--nginx -d [a-z0-9.-]+ --non-interactive --agree-tos -m [^ ]+$
+
+bastion ALL=(root) NOPASSWD: BASTION_NGINX, BASTION_SYSTEMCTL, BASTION_CERTBOT

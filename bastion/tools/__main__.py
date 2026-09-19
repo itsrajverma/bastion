@@ -1,4 +1,5 @@
-"""``python -m bastion.tools --docs`` renders docs/TOOLS.md from the registry."""
+"""``python -m bastion.tools --docs`` renders docs/TOOLS.md from the registry;
+``--sudoers-apt [SYSTEMD_RUN_BIN]`` renders the apt block of deploy/sudoers.bastion."""
 
 from __future__ import annotations
 
@@ -109,7 +110,14 @@ def main(argv: list[str] | None = None) -> int:
     if "--json" in args:
         sys.stdout.write(json.dumps([s.describe() for s in sorted_registry()], indent=2) + "\n")
         return 0
-    sys.stderr.write("usage: python -m bastion.tools --docs | --json\n")
+    if "--sudoers-apt" in args:
+        from bastion.tools.packages import DEFAULT_SYSTEMD_RUN_BIN, render_sudoers_apt
+
+        idx = args.index("--sudoers-apt")
+        binary = args[idx + 1] if len(args) > idx + 1 else DEFAULT_SYSTEMD_RUN_BIN
+        sys.stdout.write(render_sudoers_apt(binary) + "\n")
+        return 0
+    sys.stderr.write("usage: python -m bastion.tools --docs | --json | --sudoers-apt [BIN]\n")
     return 2
 
 

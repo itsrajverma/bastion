@@ -143,6 +143,31 @@ def apt_install_argv(package: str) -> list[str]:
     ]
 
 
+#: sudoers(5): these characters must be backslash-escaped inside command arguments.
+_SUDOERS_ESCAPE = str.maketrans({",": "\\,", ":": "\\:", "=": "\\=", "\\": "\\\\"})
+DEFAULT_SYSTEMD_RUN_BIN = "/usr/bin/systemd-run"
+
+
+def sudoers_command(argv: list[str], *, systemd_run_bin: str = DEFAULT_SYSTEMD_RUN_BIN) -> str:
+    """One sudoers command spec for an apt argv: absolute binary, escaped literal args."""
+    assert argv[0] == "systemd-run"
+    return " ".join([systemd_run_bin, *(arg.translate(_SUDOERS_ESCAPE) for arg in argv[1:])])
+
+
+def render_sudoers_apt(systemd_run_bin: str = DEFAULT_SYSTEMD_RUN_BIN) -> str:
+    """The ``Cmnd_Alias BASTION_APT`` block: exactly the argvs install_package runs."""
+    commands = [sudoers_command(apt_update_argv(), systemd_run_bin=systemd_run_bin)]
+    commands += [
+        sudoers_command(apt_install_argv(key), systemd_run_bin=systemd_run_bin) for key in PACKAGES
+    ]
+    head = "Cmnd_Alias BASTION_APT       = "
+    pad = " " * len(head)
+    lines = [f"{head}{commands[0]}, \\"]
+    lines += [f"{pad}{cmd}, \\" for cmd in commands[1:-1]]
+    lines.append(f"{pad}{commands[-1]}")
+    return "\n".join(lines)
+
+
 def _install_plan(package: str) -> str:
     return "\n".join(
         (

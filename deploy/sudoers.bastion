@@ -1,12 +1,18 @@
 # /etc/sudoers.d/bastion  (mode 0440, validated with `visudo -cf` by install.sh)
 #
 # Exactly the commands Bastion's tools run, nothing else. There is deliberately
-# no rule for kill, rm, bash, sh, or any command that accepts a free-form path.
-# kill_process uses CAP_KILL from the systemd unit instead of sudo.
+# no rule for kill, rm, bash, sh, apt-get remove/purge, or any command that
+# accepts a free-form path. kill_process uses CAP_KILL from the systemd unit
+# instead of sudo.
 #
 # Arguments are matched with sudo regular expressions (sudo >= 1.9.10) so that
 # an argument can never smuggle extra flags: sudoers globs (`*`) match spaces.
 # install.sh substitutes the real binary paths for this host.
+#
+# BASTION_APT is generated from the package catalog in bastion/tools/packages.py
+# (`python -m bastion.tools --sudoers-apt`): one literal line per catalog entry,
+# no wildcards. install_package runs apt-get through `systemd-run --wait` so it
+# executes outside the executor's read-only sandbox; `\=` is sudoers escaping.
 
 Defaults:bastion !requiretty
 Defaults:bastion env_reset
@@ -19,5 +25,18 @@ Cmnd_Alias BASTION_SYSTEMCTL = /usr/bin/systemctl restart nginx, \
                                /usr/bin/systemctl restart postgresql
 Cmnd_Alias BASTION_CERTBOT   = /usr/bin/certbot renew, \
                                /usr/bin/certbot ^--nginx -d [a-z0-9.-]+ --non-interactive --agree-tos -m [^ ]+$
+Cmnd_Alias BASTION_APT       = /usr/bin/systemd-run --wait --pipe --collect --quiet --setenv\=DEBIAN_FRONTEND\=noninteractive --unit\=bastion-apt-update /usr/bin/apt-get update -q, \
+                               /usr/bin/systemd-run --wait --pipe --collect --quiet --setenv\=DEBIAN_FRONTEND\=noninteractive --unit\=bastion-apt-install-nginx /usr/bin/apt-get install -y nginx, \
+                               /usr/bin/systemd-run --wait --pipe --collect --quiet --setenv\=DEBIAN_FRONTEND\=noninteractive --unit\=bastion-apt-install-apache /usr/bin/apt-get install -y apache2, \
+                               /usr/bin/systemd-run --wait --pipe --collect --quiet --setenv\=DEBIAN_FRONTEND\=noninteractive --unit\=bastion-apt-install-php /usr/bin/apt-get install -y php-fpm php-cli php-mysql php-pgsql php-curl php-mbstring php-xml php-zip, \
+                               /usr/bin/systemd-run --wait --pipe --collect --quiet --setenv\=DEBIAN_FRONTEND\=noninteractive --unit\=bastion-apt-install-python /usr/bin/apt-get install -y python3 python3-venv python3-pip, \
+                               /usr/bin/systemd-run --wait --pipe --collect --quiet --setenv\=DEBIAN_FRONTEND\=noninteractive --unit\=bastion-apt-install-django /usr/bin/apt-get install -y python3-django python3-venv python3-pip, \
+                               /usr/bin/systemd-run --wait --pipe --collect --quiet --setenv\=DEBIAN_FRONTEND\=noninteractive --unit\=bastion-apt-install-nodejs /usr/bin/apt-get install -y nodejs npm, \
+                               /usr/bin/systemd-run --wait --pipe --collect --quiet --setenv\=DEBIAN_FRONTEND\=noninteractive --unit\=bastion-apt-install-mysql /usr/bin/apt-get install -y mysql-server mysql-client, \
+                               /usr/bin/systemd-run --wait --pipe --collect --quiet --setenv\=DEBIAN_FRONTEND\=noninteractive --unit\=bastion-apt-install-mariadb /usr/bin/apt-get install -y mariadb-server mariadb-client, \
+                               /usr/bin/systemd-run --wait --pipe --collect --quiet --setenv\=DEBIAN_FRONTEND\=noninteractive --unit\=bastion-apt-install-postgresql /usr/bin/apt-get install -y postgresql postgresql-contrib, \
+                               /usr/bin/systemd-run --wait --pipe --collect --quiet --setenv\=DEBIAN_FRONTEND\=noninteractive --unit\=bastion-apt-install-redis /usr/bin/apt-get install -y redis-server, \
+                               /usr/bin/systemd-run --wait --pipe --collect --quiet --setenv\=DEBIAN_FRONTEND\=noninteractive --unit\=bastion-apt-install-memcached /usr/bin/apt-get install -y memcached, \
+                               /usr/bin/systemd-run --wait --pipe --collect --quiet --setenv\=DEBIAN_FRONTEND\=noninteractive --unit\=bastion-apt-install-certbot /usr/bin/apt-get install -y certbot python3-certbot-nginx
 
-bastion ALL=(root) NOPASSWD: BASTION_NGINX, BASTION_SYSTEMCTL, BASTION_CERTBOT
+bastion ALL=(root) NOPASSWD: BASTION_NGINX, BASTION_SYSTEMCTL, BASTION_CERTBOT, BASTION_APT

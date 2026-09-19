@@ -39,7 +39,7 @@ MemoryDenyWriteExecute=true
 AmbientCapabilities=CAP_KILL
 
 # sudo is a setuid binary; NoNewPrivileges/RestrictSUIDSGID would break the
-# systemctl/nginx/certbot rules in deploy/sudoers.bastion. Do not enable them.
+# systemctl/nginx/certbot/systemd-run rules in deploy/sudoers.bastion. Do not enable them.
 NoNewPrivileges=false
 
 [Install]

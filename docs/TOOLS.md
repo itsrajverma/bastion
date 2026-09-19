@@ -28,6 +28,7 @@ read = green, write = yellow, admin = red.
 | `renew_ssl` | write | yes | operator, admin | Renew every certificate that is due (certbot renew) |
 | `restart_service` | write | yes | operator, admin | Restart a systemd service (nginx, gunicorn, celery, or postgresql) |
 | `db_terminate_query` | admin | yes | admin | Terminate one PostgreSQL client backend (pg_terminate_backend), closing its connection |
+| `install_package` | admin | yes | admin | Install a catalog entry with apt-get (Debian/Ubuntu): refresh the package index, then install the fixed list of apt packages behind the entry |
 
 ## `ask_user`
 
@@ -357,4 +358,21 @@ Terminate one PostgreSQL client backend (pg_terminate_backend), closing its conn
     AND a.pid <> pg_backend_pid()
     AND a.usename IS NOT NULL
     AND a.usename NOT IN (SELECT rolname FROM pg_roles WHERE rolreplication)
+  ```
+
+## `install_package`
+
+Install a catalog entry with apt-get (Debian/Ubuntu): refresh the package index, then install the fixed list of apt packages behind the entry. Only the catalog keys can be installed, with the exact package names shown in the plan; there is no free-text package, version, or repository argument. Packages are never removed, purged, or downgraded. Runs outside the executor sandbox through a transient systemd unit. Requires admin approval and can take several minutes.
+
+- **Risk:** admin
+- **Needs approval:** yes
+- **Roles:** admin
+- **Verified after run with:** `package_status`
+- **Arguments:**
+  - `package` (enum: nginx, apache, php, python, django, nodejs, mysql, mariadb, postgresql, redis, memcached, certbot, required) catalog key, one of nginx, apache, php, python, django, nodejs, mysql, mariadb, postgresql, redis, memcached, certbot.
+- **Plan:**
+
+  ```
+  sudo systemd-run --wait --pipe --collect --quiet --setenv=DEBIAN_FRONTEND=noninteractive --unit=bastion-apt-update /usr/bin/apt-get update -q
+  sudo systemd-run --wait --pipe --collect --quiet --setenv=DEBIAN_FRONTEND=noninteractive --unit=bastion-apt-install-nginx /usr/bin/apt-get install -y nginx
   ```

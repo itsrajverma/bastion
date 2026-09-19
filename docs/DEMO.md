@@ -80,7 +80,8 @@ Bastion will never:
   ✘ docker rm / docker kill / docker system prune
   ✘ edit nginx, systemd, sudoers, firewall, or cron configuration
   ✘ reboot or shut down the host
-  ✘ install or remove packages
+  ✘ remove, purge, or downgrade packages (install is a closed catalog, admin-only, approved)
+  ✘ install a package outside the fixed catalog, add a repository, or pass apt flags
   ✘ change users, passwords, SSH keys, or permissions
   ✘ execute any write or admin tool without a human typing 'y'
   ✘ call any network service other than the configured LLM provider and executor

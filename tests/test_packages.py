@@ -40,6 +40,18 @@ def test_user_facing_stack_is_present() -> None:
     assert "mysql-server" in packages.CATALOG["mysql"]
 
 
+def test_catalog_units_are_in_the_service_enum() -> None:
+    """Whatever install_package can install, service_status/restart_service can manage."""
+    from bastion.tools._types import SERVICES
+
+    for key, unit in packages.CATALOG_SERVICES.items():
+        if unit is not None:
+            assert unit in SERVICES, (key, unit)
+            assert REGISTRY["service_status"].validate({"service": unit}) == {"service": unit}
+            plan = REGISTRY["restart_service"].plan({"service": unit})
+            assert plan == f"sudo systemctl restart {unit}"
+
+
 def test_package_status_rejects_free_text() -> None:
     spec = REGISTRY["package_status"]
     assert spec.validate({"package": "nginx"}) == {"package": "nginx"}

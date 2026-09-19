@@ -19,9 +19,10 @@ from bastion.core.errors import ProtectedTarget, ValidationFailed
 from bastion.tools import tool
 from bastion.tools._types import Pid
 
-PROTECTED_USERS: frozenset[str] = frozenset({"root", "postgres"})
+PROTECTED_USERS: frozenset[str] = frozenset({"root", "postgres", "mysql", "redis"})
 PROTECTED_CMD_RE = re.compile(
-    r"postgres|sshd|systemd|dockerd|containerd|nginx: master|gunicorn: master|bastion-executor",
+    r"postgres|mysqld|mariadbd|redis-server|sshd|systemd|dockerd|containerd|"
+    r"nginx: master|gunicorn: master|bastion-executor",
     re.IGNORECASE,
 )
 MIN_AGE_SECONDS = 30
@@ -92,9 +93,9 @@ def _guard(kwargs: Mapping[str, Any]) -> None:
 def kill_process(pid: Pid) -> str:
     """Send SIGTERM (graceful stop) to one process. Never SIGKILL.
 
-    Refuses pid 1, processes owned by root or postgres, anything matching
-    postgres/sshd/systemd/dockerd/nginx master/gunicorn master, and processes
-    younger than 30 seconds. Requires operator approval.
+    Refuses pid 1, processes owned by root, postgres, mysql, or redis, anything
+    matching postgres/mysqld/mariadbd/redis-server/sshd/systemd/dockerd/nginx master/
+    gunicorn master, and processes younger than 30 seconds. Requires operator approval.
 
     Args:
         pid: the process id from top_processes or process_detail.

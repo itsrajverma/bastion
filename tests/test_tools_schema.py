@@ -10,6 +10,7 @@ import pytest
 from bastion.core.errors import ValidationFailed
 from bastion.core.policy import RISKS, ROLE_RISKS
 from bastion.tools import FORBIDDEN_NAME_RE, REGISTRY, ToolSpec, tool, tools_for
+from bastion.tools._types import SERVICES
 
 FORBIDDEN_IN_NAME = re.compile(r"(^|_)(rm|delete|drop|truncate|exec|shell|command)(_|$)", re.I)
 
@@ -111,7 +112,12 @@ def test_service_enum() -> None:
         with pytest.raises(ValidationFailed):
             spec.validate({"service": bad})
     enum = spec.input_schema()["properties"]["service"]["enum"]
-    assert set(enum) == {"nginx", "gunicorn", "celery", "postgresql"}
+    assert set(enum) == set(SERVICES)
+    assert {"nginx", "gunicorn", "celery", "postgresql"} <= set(enum)
+    assert {"apache2", "mysql", "mariadb", "redis-server", "memcached"} <= set(enum)
+    for bad in ("apache", "redis", "mysqld", "php-fpm", "sshd", "docker"):
+        with pytest.raises(ValidationFailed):
+            spec.validate({"service": bad})
 
 
 def test_pid_validation_rejects_garbage() -> None:

@@ -22,7 +22,12 @@ Cmnd_Alias BASTION_NGINX     = /usr/sbin/nginx -t
 Cmnd_Alias BASTION_SYSTEMCTL = /usr/bin/systemctl restart nginx, \
                                /usr/bin/systemctl restart gunicorn, \
                                /usr/bin/systemctl restart celery, \
-                               /usr/bin/systemctl restart postgresql
+                               /usr/bin/systemctl restart postgresql, \
+                               /usr/bin/systemctl restart apache2, \
+                               /usr/bin/systemctl restart mysql, \
+                               /usr/bin/systemctl restart mariadb, \
+                               /usr/bin/systemctl restart redis-server, \
+                               /usr/bin/systemctl restart memcached
 Cmnd_Alias BASTION_CERTBOT   = /usr/bin/certbot renew, \
                                /usr/bin/certbot ^--nginx -d [a-z0-9.-]+ --non-interactive --agree-tos -m [^ ]+$
 Cmnd_Alias BASTION_APT       = /usr/bin/systemd-run --wait --pipe --collect --quiet --setenv\=DEBIAN_FRONTEND\=noninteractive --unit\=bastion-apt-update /usr/bin/apt-get update -q, \

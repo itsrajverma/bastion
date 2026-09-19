@@ -26,7 +26,7 @@ read = green, write = yellow, admin = red.
 | `install_ssl` | write | yes | operator, admin | Obtain and install a Let's Encrypt certificate for a domain via certbot's nginx plugin |
 | `kill_process` | write | yes | operator, admin | Send SIGTERM (graceful stop) to one process |
 | `renew_ssl` | write | yes | operator, admin | Renew every certificate that is due (certbot renew) |
-| `restart_service` | write | yes | operator, admin | Restart a systemd service (nginx, gunicorn, celery, or postgresql) |
+| `restart_service` | write | yes | operator, admin | Restart a systemd service from the closed service list |
 | `db_terminate_query` | admin | yes | admin | Terminate one PostgreSQL client backend (pg_terminate_backend), closing its connection |
 | `install_package` | admin | yes | admin | Install a catalog entry with apt-get (Debian/Ubuntu): refresh the package index, then install the fixed list of apt packages behind the entry |
 
@@ -214,7 +214,7 @@ Fetch the most recent journal lines for a systemd service.
 - **Needs approval:** no
 - **Roles:** viewer, operator, admin
 - **Arguments:**
-  - `service` (enum: nginx, gunicorn, celery, postgresql, required) one of nginx, gunicorn, celery, postgresql.
+  - `service` (enum: nginx, gunicorn, celery, postgresql, apache2, mysql, mariadb, redis-server, memcached, required) one of nginx, gunicorn, celery, postgresql, apache2, mysql, mariadb, redis-server, memcached.
   - `lines` (integer, default `100`) how many lines to fetch (1-500).
 - **Plan:**
 
@@ -230,7 +230,7 @@ Show whether a systemd service is active, its main pid, restart count, and start
 - **Needs approval:** no
 - **Roles:** viewer, operator, admin
 - **Arguments:**
-  - `service` (enum: nginx, gunicorn, celery, postgresql, required) one of nginx, gunicorn, celery, postgresql.
+  - `service` (enum: nginx, gunicorn, celery, postgresql, apache2, mysql, mariadb, redis-server, memcached, required) one of nginx, gunicorn, celery, postgresql, apache2, mysql, mariadb, redis-server, memcached.
 - **Plan:**
 
   ```
@@ -293,7 +293,7 @@ Obtain and install a Let's Encrypt certificate for a domain via certbot's nginx 
 
 ## `kill_process`
 
-Send SIGTERM (graceful stop) to one process. Never SIGKILL. Refuses pid 1, processes owned by root or postgres, anything matching postgres/sshd/systemd/dockerd/nginx master/gunicorn master, and processes younger than 30 seconds. Requires operator approval.
+Send SIGTERM (graceful stop) to one process. Never SIGKILL. Refuses pid 1, processes owned by root, postgres, mysql, or redis, anything matching postgres/mysqld/mariadbd/redis-server/sshd/systemd/dockerd/nginx master/ gunicorn master, and processes younger than 30 seconds. Requires operator approval.
 
 - **Risk:** write
 - **Needs approval:** yes
@@ -323,14 +323,14 @@ Renew every certificate that is due (certbot renew). Requires operator approval.
 
 ## `restart_service`
 
-Restart a systemd service (nginx, gunicorn, celery, or postgresql). This is the heaviest fix available; prefer cancelling a query or terminating a single worker first. Requires operator approval.
+Restart a systemd service from the closed service list. This is the heaviest fix available; prefer cancelling a query or terminating a single worker first. Requires operator approval.
 
 - **Risk:** write
 - **Needs approval:** yes
 - **Roles:** operator, admin
 - **Verified after run with:** `service_status`
 - **Arguments:**
-  - `service` (enum: nginx, gunicorn, celery, postgresql, required) one of nginx, gunicorn, celery, postgresql.
+  - `service` (enum: nginx, gunicorn, celery, postgresql, apache2, mysql, mariadb, redis-server, memcached, required) one of nginx, gunicorn, celery, postgresql, apache2, mysql, mariadb, redis-server, memcached.
 - **Plan:**
 
   ```

@@ -7,8 +7,29 @@ from typing import Annotated, Literal
 from pydantic import Field
 
 #: Services Bastion may inspect or restart. A closed enum, never free text.
-Service = Literal["nginx", "gunicorn", "celery", "postgresql"]
-SERVICES: tuple[str, ...] = ("nginx", "gunicorn", "celery", "postgresql")
+#: The last five are the units provided by the package catalog (tools/packages.py).
+Service = Literal[
+    "nginx",
+    "gunicorn",
+    "celery",
+    "postgresql",
+    "apache2",
+    "mysql",
+    "mariadb",
+    "redis-server",
+    "memcached",
+]
+SERVICES: tuple[str, ...] = (
+    "nginx",
+    "gunicorn",
+    "celery",
+    "postgresql",
+    "apache2",
+    "mysql",
+    "mariadb",
+    "redis-server",
+    "memcached",
+)
 
 DOMAIN_PATTERN = r"^[a-z0-9.-]+$"
 

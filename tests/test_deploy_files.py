@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 
 from bastion.tools import REGISTRY, packages
-from bastion.tools._types import PACKAGES
+from bastion.tools._types import PACKAGES, SERVICES
 
 ROOT = Path(__file__).resolve().parent.parent
 UNIT = ROOT / "deploy" / "bastion-executor.service"
@@ -76,8 +76,10 @@ def test_sudoers_lists_exact_commands_only() -> None:
     ):
         assert banned not in body, banned
     assert not re.search(r"(^|\s)-9(\s|$)", body), "a bare -9 signal argument must never appear"
-    # the systemctl/nginx/certbot commands the service tools run
-    assert body.count("systemctl restart") == 4
+    # the systemctl/nginx/certbot commands the service tools run: one exact line per service
+    assert body.count("systemctl restart") == len(SERVICES)
+    for svc in SERVICES:
+        assert f"/usr/bin/systemctl restart {svc}" in body, svc
     assert "nginx -t" in body
     assert "certbot renew" in body
     assert "certbot ^--nginx -d [a-z0-9.-]+ --non-interactive --agree-tos -m [^ ]+$" in body
@@ -120,7 +122,9 @@ def test_sudoers_escaping_is_literal_only() -> None:
 
 def test_installer_sudoers_matches_deploy_shape() -> None:
     text = INSTALL.read_text(encoding="utf-8")
-    assert text.count("restart nginx") >= 1 and text.count("restart postgresql") >= 1
+    for svc in SERVICES:
+        assert f"${{SYSTEMCTL_BIN}} restart {svc}" in text, svc
+    assert text.count("${SYSTEMCTL_BIN} restart ") == len(SERVICES)
     assert "kill" not in text.split("Cmnd_Alias BASTION_NGINX")[1].split("NOPASSWD")[0]
     assert 'python" -m bastion.tools --sudoers-apt "${SYSTEMD_RUN_BIN}"' in text
     assert "${APT_RULES}" in text

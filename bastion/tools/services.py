@@ -17,7 +17,8 @@ def service_status(service: Service) -> str:
     """Show whether a systemd service is active, its main pid, restart count, and start time.
 
     Args:
-        service: one of nginx, gunicorn, celery, postgresql.
+        service: one of nginx, gunicorn, celery, postgresql, apache2, mysql, mariadb,
+            redis-server, memcached.
     """
     active = run_cmd(["systemctl", "is-active", service], timeout=10)
     show = run_cmd(
@@ -34,7 +35,8 @@ def service_logs(service: Service, lines: LogLines = 100) -> str:
     """Fetch the most recent journal lines for a systemd service.
 
     Args:
-        service: one of nginx, gunicorn, celery, postgresql.
+        service: one of nginx, gunicorn, celery, postgresql, apache2, mysql, mariadb,
+            redis-server, memcached.
         lines: how many lines to fetch (1-500).
     """
     result = run_cmd(
@@ -51,13 +53,14 @@ def service_logs(service: Service, lines: LogLines = 100) -> str:
     verify_with="service_status",
 )
 def restart_service(service: Service) -> str:
-    """Restart a systemd service (nginx, gunicorn, celery, or postgresql).
+    """Restart a systemd service from the closed service list.
 
     This is the heaviest fix available; prefer cancelling a query or terminating a
     single worker first. Requires operator approval.
 
     Args:
-        service: one of nginx, gunicorn, celery, postgresql.
+        service: one of nginx, gunicorn, celery, postgresql, apache2, mysql, mariadb,
+            redis-server, memcached.
     """
     result = run_cmd(["systemctl", "restart", service], sudo=True, timeout=60)
     after = run_cmd(["systemctl", "is-active", service], timeout=10)

@@ -122,7 +122,12 @@ Cmnd_Alias BASTION_NGINX     = ${NGINX_BIN} -t
 Cmnd_Alias BASTION_SYSTEMCTL = ${SYSTEMCTL_BIN} restart nginx, \\
                                ${SYSTEMCTL_BIN} restart gunicorn, \\
                                ${SYSTEMCTL_BIN} restart celery, \\
-                               ${SYSTEMCTL_BIN} restart postgresql
+                               ${SYSTEMCTL_BIN} restart postgresql, \\
+                               ${SYSTEMCTL_BIN} restart apache2, \\
+                               ${SYSTEMCTL_BIN} restart mysql, \\
+                               ${SYSTEMCTL_BIN} restart mariadb, \\
+                               ${SYSTEMCTL_BIN} restart redis-server, \\
+                               ${SYSTEMCTL_BIN} restart memcached
 Cmnd_Alias BASTION_CERTBOT   = ${CERTBOT_BIN} renew, \\
                                ${CERTBOT_RULE}
 ${APT_RULES}

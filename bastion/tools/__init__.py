@@ -298,6 +298,7 @@ def sorted_registry() -> list[ToolSpec]:
 
 # Import tool modules so that importing ``bastion.tools`` populates REGISTRY.
 from bastion.tools import (  # noqa: E402  (registration side effects)
+    packages,
     postgres,
     process,
     services,
@@ -306,4 +307,13 @@ from bastion.tools import (  # noqa: E402  (registration side effects)
     web,
 )
 
-__all__ += ["postgres", "process", "services", "sorted_registry", "system", "virtual", "web"]
+__all__ += [
+    "packages",
+    "postgres",
+    "process",
+    "services",
+    "sorted_registry",
+    "system",
+    "virtual",
+    "web",
+]

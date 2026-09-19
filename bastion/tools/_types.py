@@ -41,3 +41,35 @@ def validate_domain(domain: str) -> str:
         if len(label) > 63 or label.startswith("-") or label.endswith("-"):
             raise ValueError(f"invalid domain label {label!r}")
     return domain
+
+
+#: Software Bastion may install. A closed enum that maps to fixed apt package
+#: lists in :mod:`bastion.tools.packages`; there is no free-text package name.
+Package = Literal[
+    "nginx",
+    "apache",
+    "php",
+    "python",
+    "django",
+    "nodejs",
+    "mysql",
+    "mariadb",
+    "postgresql",
+    "redis",
+    "memcached",
+    "certbot",
+]
+PACKAGES: tuple[str, ...] = (
+    "nginx",
+    "apache",
+    "php",
+    "python",
+    "django",
+    "nodejs",
+    "mysql",
+    "mariadb",
+    "postgresql",
+    "redis",
+    "memcached",
+    "certbot",
+)

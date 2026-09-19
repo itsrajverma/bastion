@@ -17,6 +17,7 @@ read = green, write = yellow, admin = red.
 | `load_avg` | read | no | viewer, operator, admin | Show 1/5/15-minute load average, CPU count, and memory/swap headroom |
 | `memory` | read | no | viewer, operator, admin | Show RAM and swap usage in detail (total, used, available, cached, swap) |
 | `nginx_test` | read | no | viewer, operator, admin | Validate the nginx configuration (nginx -t) without reloading anything |
+| `package_status` | read | no | viewer, operator, admin | Show whether the apt packages behind a catalog entry are installed, and which version |
 | `process_detail` | read | no | viewer, operator, admin | Show details for one process: command line, user, cwd, threads, open files, uptime |
 | `service_logs` | read | no | viewer, operator, admin | Fetch the most recent journal lines for a systemd service |
 | `service_status` | read | no | viewer, operator, admin | Show whether a systemd service is active, its main pid, restart count, and start time |
@@ -172,6 +173,21 @@ Validate the nginx configuration (nginx -t) without reloading anything.
 
   ```
   sudo nginx -t
+  ```
+
+## `package_status`
+
+Show whether the apt packages behind a catalog entry are installed, and which version.
+
+- **Risk:** read
+- **Needs approval:** no
+- **Roles:** viewer, operator, admin
+- **Arguments:**
+  - `package` (enum: nginx, apache, php, python, django, nodejs, mysql, mariadb, postgresql, redis, memcached, certbot, required) catalog key, one of nginx, apache, php, python, django, nodejs, mysql, mariadb, postgresql, redis, memcached, certbot.
+- **Plan:**
+
+  ```
+  dpkg-query -W -f '${binary:Package}\t${Version}\t${db:Status-Status}\n' nginx
   ```
 
 ## `process_detail`

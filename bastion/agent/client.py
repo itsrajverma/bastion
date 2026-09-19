@@ -10,8 +10,8 @@ import httpx
 from bastion.core.errors import ExecutorError
 
 DEFAULT_TIMEOUT = 90.0
-#: ``/run`` may block on a long action (package installs take minutes); the
-#: executor still enforces per-command timeouts on its side.
+#: ``/run`` may block on a long action (package installs take minutes), so reads
+#: get a longer budget; the executor still enforces per-command timeouts.
 RUN_TIMEOUT = 900.0
 
 
@@ -72,7 +72,7 @@ class ExecutorClient:
     ) -> None:
         self.url = url.rstrip("/")
         self._token = token
-        self._http = http or httpx.Client(timeout=timeout)
+        self._http = http or httpx.Client(timeout=httpx.Timeout(timeout, read=RUN_TIMEOUT))
 
     # -- plumbing -------------------------------------------------------------
 
@@ -157,7 +157,7 @@ class ExecutorClient:
         body: dict[str, Any] = {"tool": tool, "args": args}
         if approved_plan_hash:
             body["approved_plan_hash"] = approved_plan_hash
-        data = self._request("POST", "/run", json=body, timeout=RUN_TIMEOUT)
+        data = self._request("POST", "/run", json=body)
         return RunInfo(
             tool=str(data["tool"]),
             risk=str(data["risk"]),

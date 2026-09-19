@@ -1,0 +1,9 @@
+{
+  "description": "Recorded: 'install redis' -> package_status -> install_package (approved) -> service_status",
+  "turns": [
+    {"text": "Checking whether redis is already installed.", "tool_calls": [{"name": "package_status", "args": {"package": "redis"}}]},
+    {"text": "redis-server is not installed. I will install the catalog entry redis (apt package redis-server).", "tool_calls": [{"name": "install_package", "args": {"package": "redis"}}]},
+    {"text": "", "tool_calls": [{"name": "service_status", "args": {"service": "redis-server"}}]},
+    {"text": "Installed redis-server 5:7.0.15-1 from the catalog; the redis-server unit is active.", "tool_calls": []}
+  ]
+}

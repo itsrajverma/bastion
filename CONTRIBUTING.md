@@ -40,7 +40,7 @@ pytest                                      # offline; recorded LLM fixtures onl
    - Never call `subprocess` directly; use `run_cmd` with a list. Never build SQL with string formatting; use `%s` parameters.
    - Tool names must not contain `rm`, `delete`, `drop`, `truncate`, `exec`, `shell`, `command` (as segments); the decorator refuses them.
 
-2. **sudoers** (only if the command needs root): add the exact command line to `deploy/sudoers.bastion` *and* to the generated block in `scripts/install.sh`. No wildcards in arguments; use sudo regex rules. Never add `kill`, `rm`, `sh`, or anything that takes a path.
+2. **sudoers** (only if the command needs root): add the exact command line to `deploy/sudoers.bastion` *and* to the generated block in `scripts/install.sh`. No wildcards in arguments; use sudo regex rules. Never add `kill`, `rm`, `sh`, `apt-get remove`, or anything that takes a path. The `BASTION_APT` block is generated (`python -m bastion.tools --sudoers-apt`); do not edit it by hand.
 
 3. **Tests**:
    - `tests/test_tools_schema.py` picks up the new tool automatically; make sure it passes.
@@ -56,6 +56,17 @@ pytest                                      # offline; recorded LLM fixtures onl
    CI fails if the file is stale. Mention the tool in `README.md` if it changes what Bastion can or cannot do.
 
 5. **Verification**: if the tool fixes something, set `verify_with="<read tool>"` so the CLI re-checks and prints a `✔ before → after` line.
+
+## Adding a package-catalog entry
+
+The catalog (`bastion/tools/packages.py`) is the only way software gets installed, and it is install-only.
+
+1. Add the key to `Package`/`PACKAGES` in `bastion/tools/_types.py` and its fixed apt tuple to `CATALOG`; add its unit (or `None`) to `CATALOG_SERVICES`.
+2. If it has a unit, add it to `Service`/`SERVICES` and a `systemctl restart <unit>` line to `deploy/sudoers.bastion` and `scripts/install.sh`.
+3. Regenerate the apt block into `deploy/sudoers.bastion` (`python -m bastion.tools --sudoers-apt`) and `docs/TOOLS.md`; add the key to the install playbook in `bastion/agent/prompts.py` and the table in `docs/INSTALLING_SOFTWARE.md`.
+4. `pytest`: the catalog/enum/sudoers consistency tests fail until everything matches.
+
+Entries that take a version, a URL, a path, a repository, or that remove anything are rejected by policy.
 
 ## Adding a provider
 

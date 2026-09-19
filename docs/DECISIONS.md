@@ -24,7 +24,7 @@ for the *same* validated arguments. This binds "what the human saw" to "what run
 A sudoers rule such as `/bin/kill -TERM [0-9]*` is unsafe because sudoers globs match spaces
 (`kill -TERM 1 -1`). Granting the unit `AmbientCapabilities=CAP_KILL` lets the guard in
 `bastion/tools/process.py` be the only thing between a request and a signal, and leaves the sudoers
-file with exactly six fixed commands. There is no SIGKILL code path.
+file with literal commands only (no `kill` rule). There is no SIGKILL code path.
 
 ## D5. sudoers uses regex argument rules (sudo >= 1.9.10) with a documented glob fallback
 `certbot --nginx -d <domain> ...` needs a variable argument. Regex rules (`^...$`) prevent extra flags from
@@ -40,10 +40,11 @@ The spec forbids names matching `/(rm|delete|...)/i` and also requires `db_termi
 the letters `rm`. The decorator and the test therefore match segments (`(^|_)(rm|delete|...)(_|$)`), which still
 rejects `rm_files`, `exec_cmd`, `shell`, `run_command`, and adds `sudo`, `eval`, `purge`, `wipe`, `destroy`, `remove`.
 
-## D8. Service names are a closed enum of four
-`nginx`, `gunicorn`, `celery`, `postgresql` for `service_status`, `service_logs`, and `restart_service`.
+## D8. Service names are a closed enum of nine
+`nginx`, `gunicorn`, `celery`, `postgresql`, plus the units the package catalog installs (`apache2`, `mysql`,
+`mariadb`, `redis-server`, `memcached`) for `service_status`, `service_logs`, and `restart_service`.
 A configurable list would be more flexible but would make the sudoers file dynamic. Extending the enum is a
-one-line code change plus a sudoers line and a test, by design.
+one-line code change plus a sudoers line and a test, by design; a test ties `CATALOG_SERVICES` to the enum.
 
 ## D9. `load_avg` reads `/proc/loadavg`, `os.cpu_count()`, and `psutil` memory
 Equivalent to `cat /proc/loadavg; nproc; free -m` (which the plan string shows) without spawning three processes,
@@ -85,7 +86,9 @@ identical on every machine and CI can diff it.
 
 ## D18. Extra protected targets
 Beyond the spec's list, `kill_process` also refuses pid 1, `containerd`, the executor's own pid, and process
-*names* (not only command lines) that match. These are strictly more conservative.
+*names* (not only command lines) that match. Since the package catalog can install MySQL/MariaDB and Redis, their
+daemons (`mysqld`, `mariadbd`, `redis-server`) and service users (`mysql`, `redis`) are protected like postgres.
+These are strictly more conservative.
 
 ## D19. Tool output is truncated at 20 000 characters (executor `max_result_chars`)
 Keeps a 500-line journal or a wide process list inside the provider's context budget and bounds what a
@@ -94,3 +97,30 @@ hostile log can push into the conversation.
 ## D20. Tokens are at least 32 characters
 The installer generates 64 hex characters; the config loader rejects shorter tokens so a weak hand-edited
 token cannot be introduced by accident.
+
+## D21. Software installation is a closed, install-only catalog
+The original never-list said "install or remove packages". Installing a standard web stack is a real SRE task,
+so the line moved: Bastion can *install* twelve named things (`nginx`, `apache`, `php`, `python`, `django`,
+`nodejs`, `mysql`, `mariadb`, `postgresql`, `redis`, `memcached`, `certbot`), each mapped in code to a fixed apt
+package list, and can never remove, purge, downgrade, pin, add a repository, or `pip install`. The key is a
+`Literal` enum, the tool is `admin` risk, and the never-list now names removal and out-of-catalog installs.
+Debian/Ubuntu apt only, matching the installer's target. A free-text package name was rejected because it
+would make the sudoers rule a wildcard and the model the arbiter of what lands on the host.
+
+## D22. apt runs through `systemd-run --wait --pipe`, not inside the executor
+`ProtectSystem=strict` makes the filesystem read-only for the executor *and* its sudo children, so `apt-get`
+cannot run there. Widening the sandbox (`ReadWritePaths=/usr /var/lib …`) would weaken every other tool. Instead
+`install_package` asks PID 1 to run apt in a transient unit (`--wait --pipe --collect --quiet`, a fixed
+`--unit=bastion-apt-install-<key>` name, `DEBIAN_FRONTEND=noninteractive`), relaying output and exit status.
+The executor unit is unchanged. Cost: a longer plan string and a dependency on `systemd-run` (systemd >= 236).
+
+## D23. The apt sudoers block is generated from the tool's argv
+One literal line per catalog entry (plus `apt-get update -q`) rendered by `python -m bastion.tools --sudoers-apt`,
+with `=`, `,`, `:` escaped as sudoers(5) requires. `install.sh` calls it with the host's `systemd-run` path; a test
+pins `deploy/sudoers.bastion` to the renderer. Hand-maintaining thirteen long lines in two files was the
+alternative and would drift.
+
+## D24. The CLI waits up to 900 s for `/run`
+`mysql-server` can take minutes. `ExecutorClient` uses a 90 s connect/write timeout and a 900 s read timeout;
+the executor bounds each apt command itself (180 s update, 600 s install). The loop's wall-time budget
+(invariant 12) is untouched; install sessions should pass `--max-seconds 600`.

